@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Scatterplot chart</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,300" rel="stylesheet" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+    <style media="screen">
+    body {
+        font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: rgb(128,128,128);
+    }
+    h1{
+        font-weight: normal;
+        font-size: 25px;
+        color: #777;
+    }
+    circle:hover{
+        opacity: .8;
+    }
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: #777;
+        shape-rendering: crispEdges;
+    }
+    .axis text {
+        font-size: 12px;
+    }
+    </style>
+</head>
+<body>
+
+    <h1>CO2 (kt) Emissions per country (2009) vs value </h1>
+
+    <script type="text/javascript">
+
+    //margin convention
+    var margin = {top: 30, right: 20, bottom: 60, left: 30},
+    width = 960 - margin.left - margin.right,
+    height = 650 - margin.top - margin.bottom;
+
+
+    //create x and y scale. We'll set the domain later
+    var xScale = d3.scale.linear()
+    .range([ margin.bottom, width - margin.top - margin.bottom ]);
+
+    var yScale = d3.scale.linear()
+    .range([ height - margin.right, margin.top]);
+
+    //d3 functions to format numbers https://github.com/mbostock/d3/wiki/Formatting
+    var format = d3.format("s");
+    var formatComma = d3.format(",");
+
+
+    //create x axis
+    var xAxis = d3.svg.axis()
+    .scale(xScale)
+    .orient("bottom")
+    .ticks(8)
+    .tickFormat(function(d) {
+        return format(d);
+    });
+
+    //create y axis
+    var yAxis = d3.svg.axis()
+    .scale(yScale)
+    .orient("left")
+    .tickFormat(function(d) {
+        return format(d);
+    });
+
+    //create svg container
+    var svg = d3.select("body")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    //load data
+    d3.csv("CO2-Emissions.csv", function(error, data){
+
+        //convert strings to number
+        data.forEach(function(d){
+            d.value = + d.value;
+            d.gdp = +d.gdp;
+        });
+
+        var trans = 15;
+
+        //color scale, no significant here
+        var color = d3.scale.linear()
+        .domain(d3.extent(data, function(d) {
+            return d.value;
+        }))
+        .range(["rgb(223, 196, 149)", "rgb(143, 86, 11)"])
+
+        //set scales domain
+        xScale.domain([0, d3.max(data, function(d) {
+            return d.gdp;
+        })]);
+
+        yScale.domain([0, d3.max(data, function(d) {
+            return d.value;
+        })]);
+
+        //create our circles, one for each country data
+        var circles = svg.selectAll("circle")
+        .data(data);
+
+        //new elements
+        circles
+        .enter()
+        .append("circle")
+        .attr("cx", function(d){
+            return xScale(d.gdp);
+        })
+        .attr("cy", height + trans)
+        .attr("fill", "white");
+
+        //update position to make the animation
+        circles
+        .sort(function(a, b) {
+            return d3.ascending(+a.gdp, +b.gdp);
+        })
+        .transition()
+        .delay(function(d, i){return i*50;})
+        .duration(1000).attr("cy", function(d) {
+            return yScale(d.value);
+        })
+        .attr("r", 7)
+        .attr("opacity", ".7")
+        .attr("fill", function(d){
+            return color(d.value);
+        });
+
+        //create title with data
+        circles.attr("id", function(d, i) { return "circle" + d.country; })
+        .append("title")
+        .text(function(d) {
+            return d.country +": "+formatComma(d.gdp)+" GDP and "+formatComma(d.value)+" kt of CO2 emissions in 2009";
+        });
+
+        //create axis
+        svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + (height) + ")")
+        .call(xAxis)
+        .append("text")
+        .attr("y", 35)
+        .attr("x",width/2-margin.left)
+        .attr("dy", ".5em")
+        .text("GPD");
+
+        svg.append("g")
+        .attr("class", "y axis")
+        .attr("transform", "translate(" + (margin.bottom - trans) + ",0)")
+        .call(yAxis)
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y",-55)
+        .attr("x",-(height/2)-margin.top)
+        .attr("dx", "1em")
+        .text("CO2 Emissions");
+
+    });
+
+    </script>
+
+</body>
+</html>
